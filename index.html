@@ -1,0 +1,1724 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>내 업무 플래너</title>
+    <meta name="description" content="개인 업무를 등록하고 마감일과 우선순위, 완료 상태를 관리하는 깔끔한 한 화면 업무 플래너 웹앱" />
+    <meta property="og:title" content="내 업무 플래너" />
+    <meta property="og:description" content="개인 업무를 등록하고 마감일과 우선순위, 완료 상태를 관리하는 깔끔한 한 화면 업무 플래너 웹앱" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <style>
+      /* CSS Reset & Base */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --color-primary: #2563eb;
+        --color-primary-hover: #1d4ed8;
+        --color-primary-light: #eff6ff;
+        --color-bg: #f8fafc;
+        --color-surface: #ffffff;
+        --color-text-main: #0f172a;
+        --color-text-muted: #475569;
+        --color-text-light: #94a3b8;
+        --color-border: #e2e8f0;
+        --color-border-hover: #cbd5e1;
+        --color-danger: #dc2626;
+        --color-danger-light: #fef2f2;
+        --color-warning: #d97706;
+        --color-warning-light: #fffbeb;
+        --color-success: #16a34a;
+        --color-success-light: #f0fdf4;
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        background-color: var(--color-bg);
+        color: var(--color-text-main);
+        line-height: 1.5;
+        min-height: 100vh;
+        padding: 24px 16px 64px 16px;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .app-container {
+        max-width: 820px;
+        margin: 0 auto;
+      }
+
+      /* Header */
+      .app-header {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--color-primary);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+      }
+
+      .brand-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        letter-spacing: -0.02em;
+      }
+
+      .today-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid #dbeafe;
+      }
+
+      /* Notice Bar */
+      .sync-notice-banner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f1f5f9;
+        border-left: 4px solid var(--color-primary);
+        padding: 10px 14px;
+        border-radius: var(--radius-sm);
+        font-size: 0.8125rem;
+        color: var(--color-text-muted);
+        line-height: 1.4;
+      }
+
+      /* Storage Error Toast / Alert */
+      .storage-error-alert {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        background: var(--color-danger-light);
+        border: 1px solid #fecaca;
+        color: var(--color-danger);
+        padding: 12px 16px;
+        border-radius: var(--radius-md);
+        margin-bottom: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        animation: shake 0.4s ease;
+      }
+
+      /* Stats Overview */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .stat-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 14px 16px;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .stat-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .stat-val {
+        font-size: 1.625rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        line-height: 1.1;
+      }
+
+      .stat-card.due-today .stat-val {
+        color: var(--color-warning);
+      }
+
+      .stat-card.overdue .stat-val {
+        color: var(--color-danger);
+      }
+
+      .stat-card.completed .stat-val {
+        color: var(--color-success);
+      }
+
+      /* Card Section Common */
+      .planner-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 24px;
+        overflow: hidden;
+      }
+
+      .card-header-bar {
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #ffffff;
+      }
+
+      .card-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--color-text-main);
+      }
+
+      /* Form */
+      .form-body {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .form-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-text-main);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .form-label .required {
+        color: var(--color-danger);
+      }
+
+      .input-text {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 1rem;
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-md);
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        color: var(--color-text-main);
+        background: #ffffff;
+        font-family: inherit;
+      }
+
+      .input-text:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      }
+
+      .input-text.has-error {
+        border-color: var(--color-danger);
+        background-color: var(--color-danger-light);
+      }
+
+      .input-text.has-error:focus {
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+      }
+
+      .validation-msg {
+        display: none;
+        font-size: 0.8125rem;
+        color: var(--color-danger);
+        font-weight: 500;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .form-grid-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      @media (max-width: 640px) {
+        .form-grid-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Priority Buttons Group */
+      .priority-selector {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .priority-option {
+        position: relative;
+        cursor: pointer;
+      }
+
+      .priority-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .priority-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 11px 8px;
+        border-radius: var(--radius-md);
+        border: 1.5px solid var(--color-border);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.15s ease;
+        user-select: none;
+      }
+
+      .priority-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      /* High Priority */
+      .priority-option.priority-high .priority-dot { background-color: #ef4444; }
+      .priority-option.priority-high input:checked + .priority-btn {
+        border-color: #ef4444;
+        background-color: #fef2f2;
+        color: #b91c1c;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+      }
+
+      /* Medium Priority */
+      .priority-option.priority-medium .priority-dot { background-color: #f59e0b; }
+      .priority-option.priority-medium input:checked + .priority-btn {
+        border-color: #f59e0b;
+        background-color: #fffbeb;
+        color: #b45309;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+      }
+
+      /* Low Priority */
+      .priority-option.priority-low .priority-dot { background-color: #64748b; }
+      .priority-option.priority-low input:checked + .priority-btn {
+        border-color: #64748b;
+        background-color: #f1f5f9;
+        color: #334155;
+        box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+      }
+
+      /* Date Input & Quick Presets */
+      .date-input-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .input-date {
+        width: 100%;
+        padding: 10.5px 14px;
+        font-size: 0.9375rem;
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-md);
+        outline: none;
+        transition: border-color 0.15s;
+        font-family: inherit;
+        color: var(--color-text-main);
+        background: #ffffff;
+      }
+
+      .input-date:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      }
+
+      .quick-date-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .btn-quick-date {
+        background: #f1f5f9;
+        border: 1px solid var(--color-border);
+        color: var(--color-text-muted);
+        padding: 5px 10px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+      }
+
+      .btn-quick-date:hover {
+        background: #e2e8f0;
+        color: var(--color-text-main);
+      }
+
+      /* Submit Button */
+      .btn-submit {
+        background: var(--color-primary);
+        color: #ffffff;
+        border: none;
+        border-radius: var(--radius-md);
+        padding: 14px 20px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+        transition: background-color 0.15s, transform 0.05s;
+      }
+
+      .btn-submit:hover {
+        background-color: var(--color-primary-hover);
+      }
+
+      .btn-submit:active {
+        transform: translateY(1px);
+      }
+
+      /* Task List Controls: Filter, Search, Sort */
+      .list-controls-bar {
+        padding: 16px 20px;
+        background: #fafafa;
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .filters-row {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+      }
+
+      .filter-tab {
+        background: #ffffff;
+        border: 1px solid var(--color-border);
+        border-radius: 20px;
+        padding: 6px 14px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.15s ease;
+      }
+
+      .filter-tab:hover {
+        border-color: var(--color-border-hover);
+        color: var(--color-text-main);
+      }
+
+      .filter-tab.active {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: #ffffff;
+      }
+
+      .tab-count {
+        background: rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        padding: 1px 7px;
+        font-size: 0.75rem;
+      }
+
+      .filter-tab.active .tab-count {
+        background: rgba(255, 255, 255, 0.25);
+      }
+
+      .search-sort-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .search-wrap {
+        flex: 1;
+        min-width: 200px;
+        position: relative;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 8px 12px 8px 36px;
+        font-size: 0.875rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: #ffffff;
+        outline: none;
+      }
+
+      .search-input:focus {
+        border-color: var(--color-primary);
+      }
+
+      .search-icon {
+        position: absolute;
+        left: 11px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-text-light);
+        pointer-events: none;
+      }
+
+      .sort-select {
+        padding: 8px 12px;
+        font-size: 0.875rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: #ffffff;
+        color: var(--color-text-main);
+        outline: none;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      /* Task Items Container */
+      .task-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        divide-y: 1px solid var(--color-border);
+      }
+
+      .task-item {
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        background: #ffffff;
+        transition: background-color 0.15s;
+        word-break: break-word;
+      }
+
+      .task-item:last-child {
+        border-bottom: none;
+      }
+
+      .task-item:hover {
+        background-color: #fafbfc;
+      }
+
+      /* Completed State */
+      .task-item.is-completed {
+        background-color: #fcfdfe;
+      }
+
+      .task-item.is-completed .task-title {
+        text-decoration: line-through;
+        color: var(--color-text-light);
+      }
+
+      /* Checkbox */
+      .checkbox-wrap {
+        padding-top: 2px;
+      }
+
+      .task-checkbox {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 22px;
+        height: 22px;
+        border: 2px solid #cbd5e1;
+        border-radius: 6px;
+        outline: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        transition: all 0.15s ease;
+        position: relative;
+      }
+
+      .task-checkbox:hover {
+        border-color: var(--color-primary);
+      }
+
+      .task-checkbox:checked {
+        background-color: var(--color-success);
+        border-color: var(--color-success);
+      }
+
+      .task-checkbox:checked::after {
+        content: '';
+        width: 6px;
+        height: 11px;
+        border: solid white;
+        border-width: 0 2.5px 2.5px 0;
+        transform: rotate(45deg);
+        position: absolute;
+        top: 2px;
+      }
+
+      /* Task Content */
+      .task-main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .task-title {
+        font-size: 1.0625rem;
+        font-weight: 600;
+        color: var(--color-text-main);
+        line-height: 1.45;
+        overflow-wrap: break-word;
+      }
+
+      .task-meta-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 0.8125rem;
+      }
+
+      /* Badges */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1.2;
+        border: 1px solid transparent;
+      }
+
+      /* Priority Badges */
+      .badge-priority-high {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border-color: #fecaca;
+      }
+
+      .badge-priority-medium {
+        background-color: #fef3c7;
+        color: #92400e;
+        border-color: #fde68a;
+      }
+
+      .badge-priority-low {
+        background-color: #f1f5f9;
+        color: #475569;
+        border-color: #e2e8f0;
+      }
+
+      /* Due Date Badges */
+      .badge-due-none {
+        background-color: #f8fafc;
+        color: #64748b;
+        border-color: #e2e8f0;
+      }
+
+      .badge-due-future {
+        background-color: #f0f9ff;
+        color: #0369a1;
+        border-color: #bae6fd;
+      }
+
+      .badge-due-today {
+        background-color: #fff7ed;
+        color: #c2410c;
+        border-color: #fed7aa;
+        font-weight: 700;
+      }
+
+      .badge-due-overdue {
+        background-color: #fef2f2;
+        color: #dc2626;
+        border-color: #fecaca;
+        font-weight: 700;
+      }
+
+      .badge-status-completed {
+        background-color: #f0fdf4;
+        color: #15803d;
+        border-color: #bbf7d0;
+      }
+
+      /* Delete Button */
+      .btn-delete {
+        background: transparent;
+        border: 1px solid transparent;
+        color: #94a3b8;
+        border-radius: var(--radius-sm);
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+      }
+
+      .btn-delete:hover {
+        background-color: var(--color-danger-light);
+        border-color: #fecaca;
+        color: var(--color-danger);
+      }
+
+      /* Empty State */
+      .empty-state {
+        padding: 56px 20px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .empty-icon-wrap {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        margin-bottom: 4px;
+      }
+
+      .empty-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+      }
+
+      .empty-desc {
+        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        max-width: 400px;
+        line-height: 1.5;
+      }
+
+      /* Confirm Delete Modal */
+      .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        z-index: 1000;
+      }
+
+      .modal-content {
+        background: #ffffff;
+        border-radius: var(--radius-lg);
+        width: 100%;
+        max-width: 420px;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--color-border);
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .modal-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+      }
+
+      .modal-body-text {
+        font-size: 0.9375rem;
+        color: var(--color-text-muted);
+        line-height: 1.5;
+        word-break: break-all;
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      .btn-cancel {
+        background: #f1f5f9;
+        color: var(--color-text-main);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 10px 16px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn-confirm-delete {
+        background: var(--color-danger);
+        color: #ffffff;
+        border: none;
+        border-radius: var(--radius-md);
+        padding: 10px 18px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn-confirm-delete:hover {
+        background: #b91c1c;
+      }
+
+      /* Toast Notification */
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: #1e293b;
+        color: #ffffff;
+        padding: 12px 20px;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        transform: translateY(12px);
+        transition: opacity 0.2s, transform 0.2s;
+        pointer-events: none;
+        z-index: 1000;
+      }
+
+      .toast.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* Animations */
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20%, 60% { transform: translateX(-6px); }
+        40%, 80% { transform: translateX(6px); }
+      }
+
+      @keyframes popIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Storage Error Alert Banner (Hidden unless localStorage fails) -->
+      <div id="storageErrorAlert" class="storage-error-alert" role="alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>저장되지 않았습니다. 브라우저 저장소 접근이 차단되었거나 용량이 초과되었습니다.</span>
+      </div>
+
+      <!-- App Header -->
+      <header class="app-header">
+        <div class="header-top">
+          <div class="brand">
+            <div class="brand-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11l3 3L22 4"></path>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+              </svg>
+            </div>
+            <div>
+              <h1 class="brand-title">내 업무 플래너</h1>
+            </div>
+          </div>
+          <div id="todayDateDisplay" class="today-badge">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span id="todayDateText">오늘 날짜 로딩 중...</span>
+          </div>
+        </div>
+        <div class="sync-notice-banner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>이 브라우저에 저장되며 다른 기기와 자동 동기화되지 않습니다.</span>
+        </div>
+      </header>
+
+      <!-- Stats Overview -->
+      <section class="stats-grid" aria-label="업무 현황 요약">
+        <div class="stat-card">
+          <span class="stat-label">전체 업무</span>
+          <span class="stat-val" id="statTotal">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">진행 중</span>
+          <span class="stat-val" id="statPending">0</span>
+        </div>
+        <div class="stat-card due-today">
+          <span class="stat-label">오늘 마감</span>
+          <span class="stat-val" id="statDueToday">0</span>
+        </div>
+        <div class="stat-card overdue">
+          <span class="stat-label">기한 지남</span>
+          <span class="stat-val" id="statOverdue">0</span>
+        </div>
+        <div class="stat-card completed">
+          <span class="stat-label">완료됨</span>
+          <span class="stat-val" id="statCompleted">0</span>
+        </div>
+      </section>
+
+      <!-- Task Input Form Section -->
+      <section class="planner-card" aria-labelledby="formHeading">
+        <div class="card-header-bar">
+          <h2 id="formHeading" class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-primary)">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            새 업무 등록
+          </h2>
+        </div>
+        <form id="taskForm" class="form-body" novalidate>
+          <!-- Task Title Input -->
+          <div class="form-group">
+            <label for="taskTitle" class="form-label">
+              업무명 <span class="required" title="필수 항목">*</span>
+            </label>
+            <input
+              type="text"
+              id="taskTitle"
+              class="input-text"
+              placeholder="예: 주간 기획안 작성, 팀 회의 피드백 정리"
+              autocomplete="off"
+              required
+            />
+            <div id="titleValidationMsg" class="validation-msg" role="alert">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>업무명을 입력해주세요. 공백이나 빈 칸만으로는 등록할 수 없습니다.</span>
+            </div>
+          </div>
+
+          <div class="form-grid-row">
+            <!-- Priority Selector (High / Medium / Low) -->
+            <div class="form-group">
+              <label class="form-label">우선순위</label>
+              <div class="priority-selector" role="radiogroup" aria-label="우선순위 선택">
+                <label class="priority-option priority-high">
+                  <input type="radio" name="priority" value="high" />
+                  <span class="priority-btn">
+                    <span class="priority-dot"></span>
+                    <span>높음</span>
+                  </span>
+                </label>
+                <label class="priority-option priority-medium">
+                  <input type="radio" name="priority" value="medium" checked />
+                  <span class="priority-btn">
+                    <span class="priority-dot"></span>
+                    <span>보통</span>
+                  </span>
+                </label>
+                <label class="priority-option priority-low">
+                  <input type="radio" name="priority" value="low" />
+                  <span class="priority-btn">
+                    <span class="priority-dot"></span>
+                    <span>낮음</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Due Date Input -->
+            <div class="form-group">
+              <label for="taskDueDate" class="form-label">
+                마감일 <span style="font-weight:400; color:var(--color-text-light); font-size:0.75rem;">(선택사항)</span>
+              </label>
+              <div class="date-input-wrap">
+                <input
+                  type="date"
+                  id="taskDueDate"
+                  class="input-date"
+                />
+                <div class="quick-date-row">
+                  <button type="button" class="btn-quick-date" id="btnDateToday">오늘</button>
+                  <button type="button" class="btn-quick-date" id="btnDateTomorrow">내일</button>
+                  <button type="button" class="btn-quick-date" id="btnDateNextWeek">+7일</button>
+                  <button type="button" class="btn-quick-date" id="btnDateClear">마감일 없음</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" id="btnSubmitTask" class="btn-submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>업무 등록하기</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- Task List Section -->
+      <section class="planner-card" aria-labelledby="listHeading">
+        <div class="card-header-bar">
+          <h2 id="listHeading" class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-primary)">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            업무 목록
+          </h2>
+          <span id="filteredCountBadge" style="font-size:0.8125rem; font-weight:600; color:var(--color-text-muted);">
+            총 0건
+          </span>
+        </div>
+
+        <!-- Controls: Filters, Search, Sort -->
+        <div class="list-controls-bar">
+          <div class="filters-row" role="tablist" aria-label="업무 상태 필터">
+            <button type="button" class="filter-tab active" data-filter="all" role="tab" aria-selected="true">
+              전체 <span class="tab-count" id="tabCountAll">0</span>
+            </button>
+            <button type="button" class="filter-tab" data-filter="pending" role="tab" aria-selected="false">
+              진행 중 <span class="tab-count" id="tabCountPending">0</span>
+            </button>
+            <button type="button" class="filter-tab" data-filter="dueToday" role="tab" aria-selected="false">
+              오늘 마감 <span class="tab-count" id="tabCountDueToday">0</span>
+            </button>
+            <button type="button" class="filter-tab" data-filter="overdue" role="tab" aria-selected="false">
+              기한 지남 <span class="tab-count" id="tabCountOverdue">0</span>
+            </button>
+            <button type="button" class="filter-tab" data-filter="completed" role="tab" aria-selected="false">
+              완료됨 <span class="tab-count" id="tabCountCompleted">0</span>
+            </button>
+          </div>
+
+          <div class="search-sort-row">
+            <div class="search-wrap">
+              <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                id="searchInput"
+                class="search-input"
+                placeholder="업무명으로 검색..."
+                aria-label="업무명 검색"
+              />
+            </div>
+            <select id="sortSelect" class="sort-select" aria-label="정렬 기준">
+              <option value="created-desc">최신 등록순</option>
+              <option value="created-asc">오래된 등록순</option>
+              <option value="due-asc">마감일 임박순</option>
+              <option value="priority-desc">우선순위 높은순</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Task List Items -->
+        <ul id="taskList" class="task-list" aria-live="polite">
+          <!-- Dynamically populated via JS -->
+        </ul>
+
+        <!-- Empty State Container -->
+        <div id="emptyState" class="empty-state" style="display:none;">
+          <div class="empty-icon-wrap">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <h3 id="emptyStateTitle" class="empty-title">등록된 업무가 없습니다</h3>
+          <p id="emptyStateDesc" class="empty-desc">
+            새로운 업무를 등록하여 하루의 일정을 체계적으로 계획하고 관리해보세요!
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Confirm Delete Modal Dialog -->
+    <div id="deleteModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+      <div class="modal-content">
+        <h3 id="deleteModalTitle" class="modal-title">업무 삭제 확인</h3>
+        <p class="modal-body-text">
+          ‘<span id="deleteTargetTitle" style="font-weight:600; color:var(--color-text-main);"></span>’<br />
+          업무를 삭제하시겠습니까? 삭제된 업무는 복구할 수 없습니다.
+        </p>
+        <div class="modal-actions">
+          <button type="button" id="btnCancelDelete" class="btn-cancel">취소</button>
+          <button type="button" id="btnConfirmDelete" class="btn-confirm-delete">삭제하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Feedback Toast -->
+    <div id="toast" class="toast" role="status" aria-live="polite">
+      <span id="toastMsg">알림 메시지</span>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+      (function () {
+        'use strict';
+
+        const STORAGE_KEY = 'my_work_planner_tasks_v1';
+
+        // State
+        let tasks = [];
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let currentSort = 'created-desc';
+        let pendingDeleteId = null;
+
+        // Elements
+        const taskForm = document.getElementById('taskForm');
+        const taskTitleInput = document.getElementById('taskTitle');
+        const titleValidationMsg = document.getElementById('titleValidationMsg');
+        const taskDueDateInput = document.getElementById('taskDueDate');
+        const taskList = document.getElementById('taskList');
+        const emptyState = document.getElementById('emptyState');
+        const emptyStateTitle = document.getElementById('emptyStateTitle');
+        const emptyStateDesc = document.getElementById('emptyStateDesc');
+        const storageErrorAlert = document.getElementById('storageErrorAlert');
+        const todayDateText = document.getElementById('todayDateText');
+
+        // Preset date buttons
+        const btnDateToday = document.getElementById('btnDateToday');
+        const btnDateTomorrow = document.getElementById('btnDateTomorrow');
+        const btnDateNextWeek = document.getElementById('btnDateNextWeek');
+        const btnDateClear = document.getElementById('btnDateClear');
+
+        // Filter tabs & controls
+        const filterTabs = document.querySelectorAll('.filter-tab');
+        const searchInput = document.getElementById('searchInput');
+        const sortSelect = document.getElementById('sortSelect');
+        const filteredCountBadge = document.getElementById('filteredCountBadge');
+
+        // Stat elements
+        const statTotal = document.getElementById('statTotal');
+        const statPending = document.getElementById('statPending');
+        const statDueToday = document.getElementById('statDueToday');
+        const statOverdue = document.getElementById('statOverdue');
+        const statCompleted = document.getElementById('statCompleted');
+
+        // Tab counts
+        const tabCountAll = document.getElementById('tabCountAll');
+        const tabCountPending = document.getElementById('tabCountPending');
+        const tabCountDueToday = document.getElementById('tabCountDueToday');
+        const tabCountOverdue = document.getElementById('tabCountOverdue');
+        const tabCountCompleted = document.getElementById('tabCountCompleted');
+
+        // Delete modal elements
+        const deleteModal = document.getElementById('deleteModal');
+        const deleteTargetTitle = document.getElementById('deleteTargetTitle');
+        const btnCancelDelete = document.getElementById('btnCancelDelete');
+        const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+
+        // Toast element
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+        let toastTimeout = null;
+
+        // Utility: Get User Local Date as YYYY-MM-DD
+        function getLocalTodayString() {
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+
+        // Utility: Format Date string for display
+        function formatDateKorean(dateStr) {
+          if (!dateStr) return '';
+          const parts = dateStr.split('-');
+          if (parts.length !== 3) return dateStr;
+          return `${parts[0]}.${parts[1]}.${parts[2]}`;
+        }
+
+        // Display Today in Header with Korean Weekday
+        function renderHeaderDate() {
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = now.getMonth() + 1;
+          const date = now.getDate();
+          const days = ['일', '월', '화', '수', '목', '금', '토'];
+          const dayName = days[now.getDay()];
+          todayDateText.textContent = `${year}년 ${month}월 ${date}일 (${dayName})`;
+        }
+
+        // Toast display
+        function showToast(message) {
+          if (toastTimeout) clearTimeout(toastTimeout);
+          toastMsg.textContent = message;
+          toast.classList.add('visible');
+          toastTimeout = setTimeout(() => {
+            toast.classList.remove('visible');
+          }, 2400);
+        }
+
+        // Storage Management
+        function saveTasksToStorage() {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+            storageErrorAlert.style.display = 'none';
+          } catch (err) {
+            console.error('LocalStorage save failed:', err);
+            storageErrorAlert.style.display = 'flex';
+            showToast('저장되지 않았습니다.');
+          }
+        }
+
+        function loadTasksFromStorage() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) {
+              // Start with an empty list as specified
+              tasks = [];
+              return;
+            }
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              tasks = parsed;
+            } else {
+              tasks = [];
+            }
+            storageErrorAlert.style.display = 'none';
+          } catch (err) {
+            console.error('LocalStorage load failed:', err);
+            tasks = [];
+            storageErrorAlert.style.display = 'flex';
+          }
+        }
+
+        // Calculate Task Date Status
+        // Rules:
+        // - Compare based on user local date
+        // - Incomplete & date < today: overdue ('기한 지남')
+        // - Incomplete & date == today: today ('오늘 마감')
+        // - Never mark today as overdue
+        // - Completed tasks are EXCLUDED from overdue
+        function getDueDateStatus(dueDate, completed) {
+          if (!dueDate) {
+            return { type: 'none', label: '마감일 없음' };
+          }
+
+          if (completed) {
+            return {
+              type: 'completed',
+              label: `완료됨 (${formatDateKorean(dueDate)})`,
+            };
+          }
+
+          const localToday = getLocalTodayString();
+
+          if (dueDate < localToday) {
+            return {
+              type: 'overdue',
+              label: `기한 지남 (${formatDateKorean(dueDate)})`,
+            };
+          } else if (dueDate === localToday) {
+            return {
+              type: 'today',
+              label: '오늘 마감 (D-Day)',
+            };
+          } else {
+            // Future date calculation
+            const todayMs = new Date(localToday).getTime();
+            const dueMs = new Date(dueDate).getTime();
+            const diffDays = Math.round((dueMs - todayMs) / (1000 * 60 * 60 * 24));
+            return {
+              type: 'future',
+              label: `D-${diffDays} (${formatDateKorean(dueDate)})`,
+            };
+          }
+        }
+
+        // Priority details
+        function getPriorityMeta(priority) {
+          switch (priority) {
+            case 'high':
+              return { label: '높음', cssClass: 'badge-priority-high' };
+            case 'low':
+              return { label: '낮음', cssClass: 'badge-priority-low' };
+            case 'medium':
+            default:
+              return { label: '보통', cssClass: 'badge-priority-medium' };
+          }
+        }
+
+        // Update statistics overview
+        function updateStats() {
+          const localToday = getLocalTodayString();
+          let total = tasks.length;
+          let completed = 0;
+          let pending = 0;
+          let dueToday = 0;
+          let overdue = 0;
+
+          tasks.forEach((t) => {
+            if (t.completed) {
+              completed++;
+            } else {
+              pending++;
+              if (t.dueDate) {
+                if (t.dueDate === localToday) {
+                  dueToday++;
+                } else if (t.dueDate < localToday) {
+                  overdue++;
+                }
+              }
+            }
+          });
+
+          statTotal.textContent = total;
+          statPending.textContent = pending;
+          statDueToday.textContent = dueToday;
+          statOverdue.textContent = overdue;
+          statCompleted.textContent = completed;
+
+          tabCountAll.textContent = total;
+          tabCountPending.textContent = pending;
+          tabCountDueToday.textContent = dueToday;
+          tabCountOverdue.textContent = overdue;
+          tabCountCompleted.textContent = completed;
+        }
+
+        // Render tasks according to filters, search, and sort
+        function renderTaskList() {
+          updateStats();
+
+          const localToday = getLocalTodayString();
+          const query = currentSearch.trim().toLowerCase();
+
+          // 1. Filter
+          let filtered = tasks.filter((task) => {
+            // Status filter
+            if (currentFilter === 'pending' && task.completed) return false;
+            if (currentFilter === 'completed' && !task.completed) return false;
+            if (currentFilter === 'dueToday') {
+              if (task.completed || task.dueDate !== localToday) return false;
+            }
+            if (currentFilter === 'overdue') {
+              if (task.completed || !task.dueDate || task.dueDate >= localToday) return false;
+            }
+
+            // Search query
+            if (query && !task.title.toLowerCase().includes(query)) {
+              return false;
+            }
+
+            return true;
+          });
+
+          // 2. Sort
+          filtered.sort((a, b) => {
+            if (currentSort === 'created-asc') {
+              return a.createdAt - b.createdAt;
+            } else if (currentSort === 'created-desc') {
+              return b.createdAt - a.createdAt;
+            } else if (currentSort === 'due-asc') {
+              // Tasks with due dates first, sorted ascending
+              if (!a.dueDate && !b.dueDate) return b.createdAt - a.createdAt;
+              if (!a.dueDate) return 1;
+              if (!b.dueDate) return -1;
+              return a.dueDate.localeCompare(b.dueDate);
+            } else if (currentSort === 'priority-desc') {
+              const weights = { high: 3, medium: 2, low: 1 };
+              const diff = (weights[b.priority] || 2) - (weights[a.priority] || 2);
+              if (diff !== 0) return diff;
+              return b.createdAt - a.createdAt;
+            }
+            return 0;
+          });
+
+          filteredCountBadge.textContent = `총 ${filtered.length}건`;
+
+          // Clear list
+          taskList.innerHTML = '';
+
+          // Empty state handling
+          if (filtered.length === 0) {
+            emptyState.style.display = 'flex';
+            if (tasks.length === 0) {
+              emptyStateTitle.textContent = '등록된 업무가 없습니다';
+              emptyStateDesc.textContent = '상단의 ‘새 업무 등록’에서 첫 번째 업무를 입력해보세요.';
+            } else {
+              emptyStateTitle.textContent = '조건에 맞는 업무가 없습니다';
+              emptyStateDesc.textContent = '선택한 필터 또는 검색어에 해당하는 업무가 없습니다.';
+            }
+            return;
+          }
+
+          emptyState.style.display = 'none';
+
+          // Build task items
+          filtered.forEach((task) => {
+            const li = document.createElement('li');
+            li.className = `task-item ${task.completed ? 'is-completed' : ''}`;
+            li.dataset.id = task.id;
+
+            const priorityMeta = getPriorityMeta(task.priority);
+            const dueStatus = getDueDateStatus(task.dueDate, task.completed);
+
+            let dueBadgeClass = 'badge-due-none';
+            if (dueStatus.type === 'overdue') dueBadgeClass = 'badge-due-overdue';
+            else if (dueStatus.type === 'today') dueBadgeClass = 'badge-due-today';
+            else if (dueStatus.type === 'future') dueBadgeClass = 'badge-due-future';
+            else if (dueStatus.type === 'completed') dueBadgeClass = 'badge-status-completed';
+
+            // Checkbox
+            const checkboxWrap = document.createElement('div');
+            checkboxWrap.className = 'checkbox-wrap';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'task-checkbox';
+            checkbox.checked = !!task.completed;
+            checkbox.setAttribute('aria-label', `${task.title} 완료 여부`);
+            checkbox.addEventListener('change', () => toggleTaskComplete(task.id));
+            checkboxWrap.appendChild(checkbox);
+
+            // Task content container
+            const mainContent = document.createElement('div');
+            mainContent.className = 'task-main';
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'task-title';
+            titleEl.textContent = task.title;
+
+            // Badges row
+            const metaRow = document.createElement('div');
+            metaRow.className = 'task-meta-row';
+
+            // Priority badge
+            const priorityBadge = document.createElement('span');
+            priorityBadge.className = `badge ${priorityMeta.cssClass}`;
+            priorityBadge.innerHTML = `<span class="priority-dot" style="width:6px;height:6px;border-radius:50%;display:inline-block;background:currentColor;"></span> 우선순위: ${priorityMeta.label}`;
+
+            // Due date badge
+            const dueBadge = document.createElement('span');
+            dueBadge.className = `badge ${dueBadgeClass}`;
+
+            let dueIconSvg = '';
+            if (dueStatus.type === 'overdue') {
+              dueIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+            } else if (dueStatus.type === 'today') {
+              dueIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+            } else if (dueStatus.type === 'completed') {
+              dueIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            } else {
+              dueIconSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
+            }
+
+            dueBadge.innerHTML = `${dueIconSvg} ${dueStatus.label}`;
+
+            metaRow.appendChild(priorityBadge);
+            metaRow.appendChild(dueBadge);
+
+            mainContent.appendChild(titleEl);
+            mainContent.appendChild(metaRow);
+
+            // Delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'btn-delete';
+            deleteBtn.setAttribute('title', '업무 삭제');
+            deleteBtn.setAttribute('aria-label', `${task.title} 업무 삭제`);
+            deleteBtn.innerHTML = `
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            `;
+            deleteBtn.addEventListener('click', () => openDeleteModal(task.id, task.title));
+
+            li.appendChild(checkboxWrap);
+            li.appendChild(mainContent);
+            li.appendChild(deleteBtn);
+
+            taskList.appendChild(li);
+          });
+        }
+
+        // Toggle task completed state
+        function toggleTaskComplete(id) {
+          const task = tasks.find((t) => t.id === id);
+          if (!task) return;
+
+          task.completed = !task.completed;
+          saveTasksToStorage();
+          renderTaskList();
+          showToast(task.completed ? '업무를 완료 처리했습니다.' : '업무 완료를 해제했습니다.');
+        }
+
+        // Open Delete Modal
+        function openDeleteModal(id, title) {
+          pendingDeleteId = id;
+          deleteTargetTitle.textContent = title;
+          deleteModal.style.display = 'flex';
+          btnConfirmDelete.focus();
+        }
+
+        function closeDeleteModal() {
+          pendingDeleteId = null;
+          deleteModal.style.display = 'none';
+        }
+
+        // Execute task deletion
+        function confirmDelete() {
+          if (!pendingDeleteId) return;
+
+          const targetIndex = tasks.findIndex((t) => t.id === pendingDeleteId);
+          if (targetIndex !== -1) {
+            tasks.splice(targetIndex, 1);
+            saveTasksToStorage();
+            renderTaskList();
+            showToast('업무가 삭제되었습니다.');
+          }
+          closeDeleteModal();
+        }
+
+        // Validation helper for title: Disallow whitespace-only string and guide why
+        function validateTitle(value) {
+          if (!value || value.trim().length === 0) {
+            titleValidationMsg.style.display = 'flex';
+            taskTitleInput.classList.add('has-error');
+            return false;
+          }
+          titleValidationMsg.style.display = 'none';
+          taskTitleInput.classList.remove('has-error');
+          return true;
+        }
+
+        // Form Submit: Add New Task
+        taskForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+
+          const rawTitle = taskTitleInput.value;
+          const trimmedTitle = rawTitle.trim();
+
+          if (!validateTitle(rawTitle)) {
+            taskTitleInput.focus();
+            return;
+          }
+
+          // Get selected priority
+          const selectedPriorityRadio = document.querySelector('input[name="priority"]:checked');
+          const priority = selectedPriorityRadio ? selectedPriorityRadio.value : 'medium';
+
+          // Get due date
+          const dueDate = taskDueDateInput.value || '';
+
+          // Create new task object with unique ID
+          const newTask = {
+            id: 'task_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9),
+            title: trimmedTitle,
+            priority: priority, // 'high' | 'medium' | 'low'
+            dueDate: dueDate,   // 'YYYY-MM-DD' or ''
+            completed: false,
+            createdAt: Date.now()
+          };
+
+          // Add to beginning of array
+          tasks.unshift(newTask);
+
+          // Save immediately
+          saveTasksToStorage();
+
+          // Reset Form
+          taskForm.reset();
+          // Reset priority radio to default 'medium'
+          const mediumRadio = document.querySelector('input[name="priority"][value="medium"]');
+          if (mediumRadio) mediumRadio.checked = true;
+          taskDueDateInput.value = '';
+          titleValidationMsg.style.display = 'none';
+          taskTitleInput.classList.remove('has-error');
+
+          // Re-render
+          renderTaskList();
+          showToast('새 업무가 등록되었습니다.');
+          taskTitleInput.focus();
+        });
+
+        // Live input validation clear
+        taskTitleInput.addEventListener('input', () => {
+          if (taskTitleInput.value.trim().length > 0) {
+            titleValidationMsg.style.display = 'none';
+            taskTitleInput.classList.remove('has-error');
+          }
+        });
+
+        // Quick Date presets
+        btnDateToday.addEventListener('click', () => {
+          taskDueDateInput.value = getLocalTodayString();
+        });
+
+        btnDateTomorrow.addEventListener('click', () => {
+          const d = new Date();
+          d.setDate(d.getDate() + 1);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          taskDueDateInput.value = `${year}-${month}-${day}`;
+        });
+
+        btnDateNextWeek.addEventListener('click', () => {
+          const d = new Date();
+          d.setDate(d.getDate() + 7);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          taskDueDateInput.value = `${year}-${month}-${day}`;
+        });
+
+        btnDateClear.addEventListener('click', () => {
+          taskDueDateInput.value = '';
+        });
+
+        // Filter tab selection
+        filterTabs.forEach((tab) => {
+          tab.addEventListener('click', () => {
+            filterTabs.forEach((t) => {
+              t.classList.remove('active');
+              t.setAttribute('aria-selected', 'false');
+            });
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected', 'true');
+            currentFilter = tab.dataset.filter;
+            renderTaskList();
+          });
+        });
+
+        // Search input
+        searchInput.addEventListener('input', (e) => {
+          currentSearch = e.target.value;
+          renderTaskList();
+        });
+
+        // Sort select
+        sortSelect.addEventListener('change', (e) => {
+          currentSort = e.target.value;
+          renderTaskList();
+        });
+
+        // Delete modal events
+        btnCancelDelete.addEventListener('click', closeDeleteModal);
+        btnConfirmDelete.addEventListener('click', confirmDelete);
+
+        deleteModal.addEventListener('click', (e) => {
+          if (e.target === deleteModal) {
+            closeDeleteModal();
+          }
+        });
+
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && deleteModal.style.display === 'flex') {
+            closeDeleteModal();
+          }
+        });
+
+        // Initial setup
+        renderHeaderDate();
+        loadTasksFromStorage();
+        renderTaskList();
+      })();
+    </script>
+  </body>
+</html>
