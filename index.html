@@ -728,6 +728,84 @@
         color: var(--apple-green);
       }
 
+      /* Google Calendar Action Bar & Notice Box */
+      .gcal-bar {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .gcal-btn-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .btn-gcal-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        color: var(--apple-blue);
+        padding: 5px 12px;
+        border-radius: var(--apple-radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s var(--apple-bezier);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        user-select: none;
+      }
+
+      .btn-gcal-link:hover {
+        background: var(--apple-blue-subtle);
+        border-color: rgba(0, 113, 227, 0.25);
+        color: var(--apple-blue-hover);
+        transform: translateY(-0.5px);
+      }
+
+      .btn-gcal-link:active {
+        transform: scale(0.98);
+      }
+
+      .btn-gcal-link.is-disabled {
+        background: var(--apple-gray-6);
+        border-color: rgba(0, 0, 0, 0.05);
+        color: var(--apple-gray-2);
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      .gcal-disabled-hint {
+        font-size: 0.71875rem;
+        color: var(--apple-label-tertiary);
+        font-weight: 500;
+      }
+
+      .gcal-notice-box {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        background: rgba(0, 0, 0, 0.025);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 0.6875rem;
+        color: var(--apple-label-secondary);
+        line-height: 1.45;
+        letter-spacing: -0.01em;
+      }
+
+      .gcal-notice-box svg {
+        flex-shrink: 0;
+        margin-top: 1.5px;
+        color: var(--apple-gray);
+      }
+
       /* Action Button: Delete */
       .btn-icon-trash {
         background: transparent;
@@ -1380,6 +1458,45 @@
           }
         }
 
+        // Generate Google Calendar pre-filled URL with all-day date range and URL encoding
+        function getGoogleCalendarUrl(task) {
+          if (!task.dueDate) return null;
+
+          const parts = task.dueDate.split('-');
+          if (parts.length !== 3) return null;
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          const d = parseInt(parts[2], 10);
+          if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+
+          // Exclusive end date: day after due date (handles month and year ends accurately)
+          const nextDate = new Date(y, m - 1, d + 1);
+          const nextY = nextDate.getFullYear();
+          const nextM = String(nextDate.getMonth() + 1).padStart(2, '0');
+          const nextD = String(nextDate.getDate()).padStart(2, '0');
+
+          const startY = String(y).padStart(4, '0');
+          const startM = String(m).padStart(2, '0');
+          const startD = String(d).padStart(2, '0');
+
+          const startStr = `${startY}${startM}${startD}`;
+          const endStr = `${nextY}${nextM}${nextD}`;
+          const dates = `${startStr}/${endStr}`;
+
+          const priorityMap = { high: '높음', medium: '보통', low: '낮음' };
+          const priorityText = priorityMap[task.priority] || '보통';
+
+          const detailsText = `[우선순위: ${priorityText}]\n내 업무 플래너에서 추가한 일정입니다.`;
+
+          const params = new URLSearchParams();
+          params.set('action', 'TEMPLATE');
+          params.set('text', task.title);
+          params.set('dates', dates);
+          params.set('details', detailsText);
+
+          return `https://calendar.google.com/calendar/r/eventedit?${params.toString()}`;
+        }
+
         // Stats update
         function updateStats() {
           const localToday = getLocalTodayString();
@@ -1543,8 +1660,72 @@
             metaRow.appendChild(pTag);
             metaRow.appendChild(dTag);
 
+            // Google Calendar Action Bar
+            const gcalBar = document.createElement('div');
+            gcalBar.className = 'gcal-bar';
+
+            const gcalBtnRow = document.createElement('div');
+            gcalBtnRow.className = 'gcal-btn-row';
+
+            const calIconSvg = `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            `;
+
+            if (task.dueDate) {
+              const gcalUrl = getGoogleCalendarUrl(task);
+              const gcalLink = document.createElement('a');
+              gcalLink.href = gcalUrl;
+              gcalLink.target = '_blank';
+              gcalLink.rel = 'noopener noreferrer';
+              gcalLink.className = 'btn-gcal-link';
+              gcalLink.setAttribute('title', 'Google 캘린더에 일정 추가 (새 탭)');
+              gcalLink.innerHTML = `${calIconSvg}<span>Google 캘린더에 추가</span>`;
+
+              gcalLink.addEventListener('click', () => {
+                showToast('Google 캘린더에서 확인 후 저장하세요. (자동 동기화되지 않습니다)');
+              });
+
+              gcalBtnRow.appendChild(gcalLink);
+            } else {
+              const gcalDisabledBtn = document.createElement('button');
+              gcalDisabledBtn.type = 'button';
+              gcalDisabledBtn.className = 'btn-gcal-link is-disabled';
+              gcalDisabledBtn.disabled = true;
+              gcalDisabledBtn.setAttribute('aria-disabled', 'true');
+              gcalDisabledBtn.setAttribute('title', '마감일을 먼저 설정해 주세요');
+              gcalDisabledBtn.innerHTML = `${calIconSvg}<span>Google 캘린더에 추가</span>`;
+
+              const disabledHint = document.createElement('span');
+              disabledHint.className = 'gcal-disabled-hint';
+              disabledHint.textContent = '마감일을 먼저 설정해 주세요';
+
+              gcalBtnRow.appendChild(gcalDisabledBtn);
+              gcalBtnRow.appendChild(disabledHint);
+            }
+
+            // Notice Box near button
+            const noticeBox = document.createElement('div');
+            noticeBox.className = 'gcal-notice-box';
+            noticeBox.innerHTML = `
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <span>제목과 우선순위가 Google로 전달됩니다. Google 캘린더에서 확인 후 저장하세요. 이후 변경은 자동 동기화되지 않으며, 중복 저장 여부는 자동으로 판단할 수 없습니다.</span>
+            `;
+
+            gcalBar.appendChild(gcalBtnRow);
+            gcalBar.appendChild(noticeBox);
+
             details.appendChild(nameEl);
             details.appendChild(metaRow);
+            details.appendChild(gcalBar);
 
             // Delete button
             const deleteBtn = document.createElement('button');
